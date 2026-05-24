@@ -26,10 +26,12 @@ dependencies = [
     "httpx>=0.25.0",
     "loguru>=0.7.0",
     "readability-lxml>=0.8.0",
+    "lxml_html_clean>=0.4.5",
     "rich>=13.0.0",
     "croniter>=2.0.0",
     "python-telegram-bot>=21.0",
     "ddgs>=9.5.5,<10.0.0",
+    
 ]
 
 [project.optional-dependencies]

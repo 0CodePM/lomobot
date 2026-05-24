@@ -7,6 +7,20 @@
   </p>
 </div>
 
+
+
+## 📋 Changelog
+
+### v0.0.1-alpha-1 (2026-05-24)
+- Added detailed MEMORY debug message type
+- Fixed web_fetch dependency (lxml-html-clean)
+- Fixed web_search DuckDuckGo library rename (ddgs)
+
+### v0.0.1-alpha (2026-05-20)
+- Initial release from Nanobot
+
+
+
 ## What is LoMoBot?
 
 **LoMoBot** = **Lo**cal **Mo**del **Bo**t — a personal AI assistant designed for fully local deployment.
@@ -23,11 +37,11 @@ LoMoBot is a **stripped-down, fully local** version of [nanobot](https://github.
 
 ## Who Is It For?
 
-1. **GPU-constrained users** who want everything running on limited local hardware without cloud dependencies.
+1. **Believers in local LLM deployment** who want everything running on limited local hardware without cloud dependencies.
 
-2. **Believers in small models** — you think a 9B–30B agentic model can outperform cloud LLMs with the right prompts and instructions.
+2. **Minimalists** who prefer a simple, single-agent architecture over complex multi-agent or sub-agent systems.
 
-3. **Curious tinkerers** who want to understand what’s happening between the LLM and the agent under the hood.
+3. **Curious tinkerers** who want to understand what's happening between the LLM and the agent under the hood.
 
 4. **Telegram users** looking for a fully local AI assistant.
 
@@ -42,7 +56,7 @@ git clone <your-repo>/lomobot.git
 cd lomobot
 python3 -m venv venv
 source venv/bin/activate
-pip install -e .
+pip install .
 
 
 ```

@@ -55,7 +55,7 @@ class WebSearchTool(Tool):
         # Try Brave first, fallback to DuckDuckGo
         if self.api_key:
             try:
-                results = await self._search_brave(query, n)
+                results = await self._search_brave(query, n)                
                 if results:
                     return self._format_results(query, results)
                 logger.warning("Brave returned no results, falling back to DuckDuckGo")
@@ -81,7 +81,7 @@ class WebSearchTool(Tool):
     
     async def _search_duckduckgo(self, query: str, count: int) -> list:
         """Search using DuckDuckGo (no API key needed)."""
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         ddgs = DDGS()
         results = ddgs.text(query, max_results=count)
         return [

@@ -40,7 +40,8 @@ class AgentLoop:
         max_tokens: int = 32768,
         temperature: float = 0.7,
         max_tool_iterations: int = 20,
-        brave_api_key: str | None = None
+        brave_api_key: str | None = None,
+        debug_level: int = 0
     ):
         self.bus = bus
         self.provider = provider
@@ -50,7 +51,7 @@ class AgentLoop:
         self.temperature = temperature
         self.max_iterations = max_tool_iterations
         self.brave_api_key = brave_api_key
-        
+        self.debug_level = debug_level
         self.context = ContextBuilder(workspace)
         self.sessions = SessionManager(workspace)
         self.tools = ToolRegistry()
@@ -69,6 +70,7 @@ class AgentLoop:
             "TOOL": "🔧",
             "RESULT": "✅",
             "THINK": "🧠",
+            "MEMORY": "📝",
             "FINAL": "📨",
             "SESSION": "💾",
             "CONTEXT": "📊",
@@ -165,7 +167,7 @@ class AgentLoop:
         # Set debug callback for this message (Telegram only)
         if msg.channel == "telegram":
             async def debug_to_telegram(text: str):
-                debug_msg = f"_{text}_"
+                debug_msg = f"{text}"
                 await self.bus.publish_outbound(OutboundMessage(
                     channel="telegram",
                     chat_id=msg.chat_id,
@@ -191,6 +193,18 @@ class AgentLoop:
             current_message=msg.content
         )
         
+        if self.debug_level >= 5:
+            from lomobot.channels.telegram import _strip_md_block
+            lines = [f"Context: {len(messages)} messages"]
+            for i, m in enumerate(messages, 1):
+                role = m.get('role', '?')
+                raw = str(m.get('content', ''))
+                clean = _strip_md_block(raw).replace('\n', ' ').strip()[:60]
+                if len(clean) > 60:
+                    clean += '...'
+                lines.append(f"  {i}. [{role}] {clean}")
+            await self._debug("MEMORY", "\n".join(lines))
+
         # Agent loop
         iteration = 0
         final_content = None
@@ -225,6 +239,13 @@ class AgentLoop:
             if response.finish_reason == "error" and response.metadata.get("debug"):
                 debug_info = response.metadata["debug"]
                 await self._debug("ERROR", debug_info)
+
+            if self.debug_level >= 5:
+                debug_response = response.content.replace('\n', ' ').strip()[:200]
+                if len(response.content) > 200:
+                    debug_response += '...'
+                await self._debug("RESPONSE", f"{debug_response} (finish_reason: {response.finish_reason})")
+
 
             # Handle tool calls
             if response.has_tool_calls:
