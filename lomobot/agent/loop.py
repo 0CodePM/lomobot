@@ -34,8 +34,9 @@ class AgentLoop:
     def __init__(
         self,
         bus: MessageBus,
-        provider: LLMProvider,
         workspace: Path,
+        provider: LLMProvider | None = None,
+        providers: list[LLMProvider] | None = None,
         model: str | None = None,
         max_tokens: int = 32768,
         temperature: float = 0.7,
@@ -45,8 +46,10 @@ class AgentLoop:
     ):
         self.bus = bus
         self.provider = provider
+        self.providers = providers or {}
+        self._current_provider_idx = 0
         self.workspace = workspace
-        self.model = model or provider.get_default_model()
+        self.model = model 
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.max_iterations = max_tool_iterations
@@ -190,9 +193,13 @@ class AgentLoop:
         # Build initial messages (use get_history for LLM-formatted messages)
         messages = self.context.build_messages(
             history=session.get_history(),
-            current_message=msg.content
-        )
+            current_message=msg.content,
+            media=msg.media if msg.media else None,
+        ) 
         
+        #logger.debug(f"Built {len(messages)} messages for LLM call")
+        #logger.debug(f"{messages}")
+
         if self.debug_level >= 5:
             from lomobot.channels.telegram import _strip_md_block
             lines = [f"Context: {len(messages)} messages"]
@@ -213,13 +220,15 @@ class AgentLoop:
             iteration += 1
             
             # Debug: calling LLM
-            # Context info
-            msg_count = len(messages)
-            await self._debug("CONTEXT", f"{msg_count} messages")
+            # Context info, messages is list of history, system instruction.
 
+            msg_count = len(messages)
             await self._debug("CALL", f"{self.model} (iter {iteration})")
+            await self._debug("CONTEXT", f"{msg_count} messages")
+            #await self._debug("CONTEXT", messages[-3:])  # Show last 3 messages for context
 
             # Call LLM
+            response = None
             try: 
                 response = await self.provider.chat(
                     messages=messages,
@@ -231,9 +240,17 @@ class AgentLoop:
             except Exception as e:
                 
                 await self._debug("ERROR", f"LLM call failed: {e}")
-                logger.error(f"LLM call error: {e}")
+                print(f"LLM call error: {e}")
+            
+            if response is None:
+                response = await provider.chat(
+                    messages=[{"role": "user", "content": "Error occurred"}],
+                    max_tokens=100
+                )
             
             logger.info(f"LLM response (iteration {iteration}): {response.content}")
+            await self._debug("LLM_RESPONSE", f"{response}")
+            await self._debug("RESULT", f"{response.content[:10]} ... (finish_reason: {response.finish_reason})")
 
             # Send debug message if error with debug metadata
             if response.finish_reason == "error" and response.metadata.get("debug"):
@@ -275,6 +292,8 @@ class AgentLoop:
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
+                # Interleaved CoT: reflect before next action
+                messages.append({"role": "user", "content": "Reflect on the results and decide next steps."})
             else:
                 # No tool calls, we're done
                 final_content = response.content

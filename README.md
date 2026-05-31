@@ -11,6 +11,10 @@
 
 ## 📋 Changelog
 
+### v0.0.2-alpha (2026-05-31)
+- Added Vision support
+- Added multiple provider in config file for future development
+
 ### v0.0.1-alpha-1 (2026-05-24)
 - Added detailed MEMORY debug message type
 - Fixed web_fetch dependency (lxml-html-clean)

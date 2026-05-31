@@ -50,7 +50,7 @@ class ProviderConfig(BaseModel):
 class ProvidersConfig(BaseModel):
     """Configuration for LLM providers."""
     master: ProviderConfig = Field(default_factory=ProviderConfig)
-
+    router: ProviderConfig = Field(default_factory=ProviderConfig)
     failover: ProviderConfig = Field(default_factory=ProviderConfig)
 
 
