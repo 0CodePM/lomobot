@@ -35,3 +35,6 @@ bridge/dist/
 
 # OS
 .DS_Store
+
+# Logs
+*.log
