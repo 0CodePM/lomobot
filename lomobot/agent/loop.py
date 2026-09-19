@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+import random
+import time
 from pathlib import Path
 from typing import Any
 
@@ -243,14 +245,16 @@ class AgentLoop:
                 print(f"LLM call error: {e}")
             
             if response is None:
-                response = await provider.chat(
+                response = await self.provider.chat(
                     messages=[{"role": "user", "content": "Error occurred"}],
+                    model=self.model,
                     max_tokens=100
                 )
             
             logger.info(f"LLM response (iteration {iteration}): {response.content}")
             await self._debug("LLM_RESPONSE", f"{response}")
-            await self._debug("RESULT", f"{response.content[:10]} ... (finish_reason: {response.finish_reason})")
+            content_preview = (response.content or "")[:10]
+            await self._debug("RESULT", f"{content_preview} ... (finish_reason: {response.finish_reason})")
 
             # Send debug message if error with debug metadata
             if response.finish_reason == "error" and response.metadata.get("debug"):
@@ -258,8 +262,8 @@ class AgentLoop:
                 await self._debug("ERROR", debug_info)
 
             if self.debug_level >= 5:
-                debug_response = response.content.replace('\n', ' ').strip()[:200]
-                if len(response.content) > 200:
+                debug_response = (response.content or "").replace('\n', ' ').strip()[:200]
+                if len(response.content or "") > 200:
                     debug_response += '...'
                 await self._debug("RESPONSE", f"{debug_response} (finish_reason: {response.finish_reason})")
 
@@ -286,17 +290,32 @@ class AgentLoop:
                 for tool_call in response.tool_calls:
                     logger.debug(f"Executing tool: {tool_call.name}")
                     await self._debug("TOOL", f"{tool_call.name}({json.dumps(tool_call.arguments, ensure_ascii=False)})")
+                    # Track tool-call start/finish so we can detect fast calls
+                    _tool_start = time.time()
                     result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                    _tool_done = time.time()
+                    _tool_elapsed = _tool_done - _tool_start
                     result_preview = str(result)[:100] + ("..." if len(str(result)) > 100 else "")
                     await self._debug("RESULT", f"{tool_call.name} → {result_preview}")
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
+                    # Breather: fast tool calls keep the upstream (proxy/vLLM)
+                    # continuously busy and can make it reset the next connection
+                    # mid-response. Pause a fixed 1s after fast tools before the
+                    # next LLM request.
+                    if _tool_elapsed < 3.0:
+                        _breather = 1.0
+                    else:
+                        _breather = 0.0
+                    if _breather > 0:
+                        await self._debug("THINK", f"tool {tool_call.name} fast ({_tool_elapsed:.1f}s) -> breather {_breather:.1f}s")
+                        await asyncio.sleep(_breather)
                 # Interleaved CoT: reflect before next action
                 messages.append({"role": "user", "content": "Reflect on the results and decide next steps."})
             else:
                 # No tool calls, we're done
-                final_content = response.content
+                final_content = response.content or "(model returned no content)"
                 break
         
         if final_content is None:
@@ -337,4 +356,4 @@ class AgentLoop:
         )
         
         response = await self._process_message(msg)
-        return response.content if response else ""
+        return (response.content or "") if response else ""
