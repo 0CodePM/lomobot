@@ -70,7 +70,6 @@ def onboard():
     console.print("  1. Add your API key to [cyan]~/.lomobot/config.json[/cyan]")
     console.print("     Set api_base in config.json under providers.master")
     console.print("  2. Chat: [cyan]lomobot agent -m \"Hello!\"[/cyan]")
-    console.print("\n[dim]Want Telegram/WhatsApp? See: https://github.com/HKUDS/lomobot#-chat-apps[/dim]")
 
 
 

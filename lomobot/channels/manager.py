@@ -53,6 +53,17 @@ class ChannelManager:
                 logger.info("WhatsApp channel enabled")
             except ImportError as e:
                 logger.warning(f"WhatsApp channel not available: {e}")
+
+        # MQTT channel
+        if self.config.channels.mqtt.enabled:
+            try:
+                from lomobot.channels.mqtt import MQTTChannel
+                self.channels["mqtt"] = MQTTChannel(
+                    self.config.channels.mqtt, self.bus
+                )
+                logger.info("MQTT channel enabled")
+            except ImportError as e:
+                logger.warning(f"MQTT channel not available: {e}")
     
     async def start_all(self) -> None:
         """Start WhatsApp channel and the outbound dispatcher."""

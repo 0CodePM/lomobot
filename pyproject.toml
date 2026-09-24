@@ -31,7 +31,7 @@ dependencies = [
     "croniter>=2.0.0",
     "python-telegram-bot>=21.0",
     "ddgs>=9.5.5,<10.0.0",
-    
+    "paho-mqtt>=2.0.0",
 ]
 
 [project.optional-dependencies]

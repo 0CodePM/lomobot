@@ -20,10 +20,26 @@ class TelegramConfig(BaseModel):
     debug: int = 0  # Debug level for Telegram channel
 
 
+class MQTTConfig(BaseModel):
+    """MQTT channel configuration (mosquitto broker)."""
+    enabled: bool = False
+    broker_host: str = "127.0.0.1"
+    broker_port: int = 8883
+    agent_id: str = "agent1"
+    display_name: str = ""  # Human-friendly name shown in messages (default: agent_id)
+    username: str = ""  # MQTT username (empty = anonymous)
+    password: str = ""  # MQTT password
+    transport: str = "websockets"  # "tcp" or "websockets"
+    tls: bool = False  # TLS connection (e.g. mqtt.openiot.co:8883 via rproxy)
+    allow_from: list[str] = Field(default_factory=list)  # Allowed sender IDs
+    countersign: str = ""  # 16-char agent countersign (required to accept am/ messages)
+
+
 class ChannelsConfig(BaseModel):
     """Configuration for chat channels."""
     whatsapp: WhatsAppConfig = Field(default_factory=WhatsAppConfig)
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
+    mqtt: MQTTConfig = Field(default_factory=MQTTConfig)
 
 
 class AgentDefaults(BaseModel):

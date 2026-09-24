@@ -11,6 +11,11 @@
 
 ## 📋 Changelog
 
+### v0.0.3-alpha (2026-09-24)
+- Added MQTT channel (Fireside Chat webim protocol): TLS, media frames,
+- Added paho-mqtt dependency
+- Fix minor bugs
+
 ### v0.0.2-alpha (2026-05-31)
 - Added Vision support
 - Added multiple provider in config file for future development
@@ -31,11 +36,16 @@
 
 LoMoBot is a **stripped-down, fully local** version of [nanobot](https://github.com/HKUDS/nanobot). It cuts out all complex cloud-dependent logic and keeps only what's needed to run a personal AI assistant entirely on your own hardware.
 
-**No cloud API required.** Connect to local LLMs via Ollama, vLLM, or any OpenAI-compatible endpoint.
+**No cloud API required.** Connect to local LLMs via Ollama, vLLM, or any OpenAI-compatible endpoint. For a minimal running setup, LoMoBot has been tested with [Ternary Bonsai 2 27B](https://prismml.com/news/bonsai-2-27b)
+(`Ternary-Bonsai-2-27B-PTQ1_0` — 5.9 GB at 1.76 effective bits/weight, 262K-token
+context, Apache 2.0) served through an OpenAI-compatible endpoint, completing
+multiple real programming and system-administration tasks on this model.
+Note: PTQ1_0 checkpoints require the [PrismML llama.cpp fork](https://github.com/PrismML-Eng/llama.cpp),
+not stock llama.cpp.
 
 **Transparency** — every interaction between the Agent and the LLM is visible.
 
-**Channel support:** Telegram (tested) and WhatsApp (ported from nanobot, untested).
+**Channel support:** Telegram (tested), WhatsApp (ported, tested), and MQTT (Fireside Chat webim protocol — tested in production).
 
 
 
@@ -47,7 +57,7 @@ LoMoBot is a **stripped-down, fully local** version of [nanobot](https://github.
 
 3. **Curious tinkerers** who want to understand what's happening between the LLM and the agent under the hood.
 
-4. **Telegram users** looking for a fully local AI assistant.
+4. **Telegram users** — or anyone running an MQTT-based agent mesh — looking for a fully local AI assistant.
 
 
 
@@ -91,15 +101,25 @@ Then update `config.json` with your settings.
       "enabled": true,
       "token": "YOUR_BOT_TOKEN",
       "allow_from": ["YOUR_TELEGRAM_USERNAME"]
+    },
+    "mqtt": {
+      "enabled": false,
+      "broker_host": "mqtt.example.com",
+      "broker_port": 8883,
+      "tls": true,
+      "username": "ag_mybot",
+      "password": "YOUR_MQTT_PASSWORD",
+      "countersign": "YOUR_16_CHAR_SECRET",
+      "allow_from": []
     }
   },
   "providers": {
     "master": {
       "api_key": "no-key",
       "api_base": "http://localhost:11434/v1",
-      "model": "qwen3.6-27b",
+      "model": "qwen3.8-27b",
       "max_tokens": 32768,
-      "temperature": 0.7
+      "temperature": 0.4
     }
   },
   "tools": {
@@ -141,6 +161,23 @@ LoMoBot uses OpenAI-compatible APIs. Connect to any local or remote provider:
 | `token` | Bot token from @BotFather |
 | `allow_from` | List of allowed usernames or user IDs. Empty `[]` = allow all |
 
+### MQTT
+
+Connects to an MQTT broker using the Fireside Chat webim payload format.
+
+| Field | Description |
+|---|---|
+| `broker_host` / `broker_port` | MQTT broker address (TLS typically 8883) |
+| `tls` | Enable TLS with `CERT_REQUIRED` |
+| `username` / `password` | Broker credentials |
+| `countersign` | 16-char secret; required on `am/` agent-to-agent messages |
+| `allow_from` | Allowed senders; empty `[]` = allow all |
+
+Behavior notes:
+
+- Media: inbound/outbound images and files via Fireside Chat binary frames (≤2MB image / ≤10MB file)
+- Broker reload only blocks *new* connections — running clients keep old credentials until reconnect
+
 ### Web search
 
 A Brave Search API key is required for Brave Search.
@@ -174,7 +211,7 @@ lomobot/
 │   ├── context.py  # Prompt builder
 │   ├── memory.py   # Session memory
 │   └── tools/      # Built-in tools
-├── channels/       # Telegram
+├── channels/       # Telegram, WhatsApp, MQTT
 ├── bus/            # Message routing
 ├── cron/           # Scheduled tasks
 ├── providers/      # LLM provider (OpenAI-compatible)
